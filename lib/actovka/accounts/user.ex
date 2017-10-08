@@ -1,13 +1,14 @@
 defmodule Actovka.Accounts.User do
   use Ecto.Schema
   import Ecto.Changeset
-  alias Actovka.Accounts.User
+  alias Actovka.Accounts.{User, Credential}
 
 
   schema "users" do
     field :first_name, :string
     field :last_name, :string
     field :username, :string
+    has_one :credential, Credential
 
     timestamps()
   end

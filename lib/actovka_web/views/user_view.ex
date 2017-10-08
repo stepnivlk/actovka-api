@@ -11,9 +11,12 @@ defmodule ActovkaWeb.UserView do
   end
 
   def render("user.json", %{user: user}) do
-    %{id: user.id,
+    %{
+      id: user.id,
       first_name: user.first_name,
       last_name: user.last_name,
-      username: user.username}
+      username: user.username,
+      email: user.credential.email
+    }
   end
 end
