@@ -20,6 +20,12 @@ defmodule ActovkaWeb.UserController do
     end
   end
 
+  def me(conn, _params) do
+    user = conn.private.guardian_default_resource
+
+    render(conn, "show.json", user: user)
+  end
+
   def show(conn, %{"id" => id}) do
     user = Accounts.get_user!(id)
     render(conn, "show.json", user: user)
