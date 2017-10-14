@@ -36,6 +36,7 @@ defmodule ActovkaWeb.Endpoint do
     key: "_actovka_key",
     signing_salt: "QJBv/6IL"
 
+  plug CORSPlug
   plug ActovkaWeb.Router
 
   @doc """

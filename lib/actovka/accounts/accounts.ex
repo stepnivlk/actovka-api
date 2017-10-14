@@ -8,6 +8,8 @@ defmodule Actovka.Accounts do
 
   alias Actovka.Accounts.{User, Credential}
 
+  @bcrypt Comeonin.Bcrypt
+
   @doc """
   Returns the list of users.
 
@@ -58,6 +60,13 @@ defmodule Actovka.Accounts do
   def create_user(attrs \\ %{}) do
     %User{}
     |> User.changeset(attrs)
+    |> Ecto.Changeset.cast_assoc(:credential, with: &Credential.changeset/2)
+    |> Repo.insert()
+  end
+
+  def create_manager(attrs \\ %{}) do
+    %User{}
+    |> User.changeset(Map.merge(attrs, %{role: "manager"}))
     |> Ecto.Changeset.cast_assoc(:credential, with: &Credential.changeset/2)
     |> Repo.insert()
   end
@@ -206,15 +215,28 @@ defmodule Actovka.Accounts do
     Credential.changeset(credential, %{})
   end
 
-  def authenticate_by_email_password(email, _password) do
+  def authenticate_by_email_password(email, password) do
     query =
       from u in User,
         inner_join: c in assoc(u, :credential),
+        preload: [:credential],
         where: c.email == ^email
 
     case Repo.one(query) do
-      %User{} = user -> {:ok, user}
-      nil -> {:error, :unauthorized}
+      %User{} = user ->
+        valid_password?(user, password)
+        {:ok, user}
+      nil ->
+        @bcrypt.dummy_checkpw()
+        {:error, :unauthorized}
+    end
+  end
+
+  defp valid_password?(user, password) do
+    if @bcrypt.checkpw(password, user.credential.encrypted_password) do
+      {:ok, user}
+    else
+      {:error, :unauthorized}
     end
   end
 end

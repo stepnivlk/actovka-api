@@ -16,7 +16,8 @@ defmodule ActovkaWeb.UserView do
       first_name: user.first_name,
       last_name: user.last_name,
       username: user.username,
-      email: user.credential.email
+      email: user.credential.email,
+      role: user.role
     }
   end
 end
