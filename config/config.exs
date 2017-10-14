@@ -22,6 +22,14 @@ config :logger, :console,
   format: "$time $metadata[$level] $message\n",
   metadata: [:request_id]
 
+config :actovka, Actovka.Guardian,
+       issuer: "actovka",
+       secret_key: "jXU9m4YdM765aFqccYsovL9lML+qvZjs/BJQLfDCB0rLsuYlKDt8kdqCSoYkW+ec"
+
+config :actovka, ActovkaWeb.Plugs.AuthAccessPipeline,
+        module: Actovka.Guardian,
+        error_handler: ActovkaWeb.Plugs.AuthErrorHandler
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{Mix.env}.exs"

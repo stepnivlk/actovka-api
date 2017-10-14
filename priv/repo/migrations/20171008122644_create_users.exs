@@ -6,6 +6,7 @@ defmodule Actovka.Repo.Migrations.CreateUsers do
       add :first_name, :string
       add :last_name, :string
       add :username, :string
+      add :role, :string, default: "user"
 
       timestamps()
     end

@@ -6,7 +6,9 @@ defmodule Actovka.Accounts do
   import Ecto.Query, warn: false
   alias Actovka.Repo
 
-  alias Actovka.Accounts.User
+  alias Actovka.Accounts.{User, Credential}
+
+  @bcrypt Comeonin.Bcrypt
 
   @doc """
   Returns the list of users.
@@ -18,7 +20,9 @@ defmodule Actovka.Accounts do
 
   """
   def list_users do
-    Repo.all(User)
+    User
+    |> Repo.all
+    |> Repo.preload(:credential)
   end
 
   @doc """
@@ -35,7 +39,11 @@ defmodule Actovka.Accounts do
       ** (Ecto.NoResultsError)
 
   """
-  def get_user!(id), do: Repo.get!(User, id)
+  def get_user!(id) do
+    User
+    |> Repo.get!(id)
+    |> Repo.preload(:credential)
+  end
 
   @doc """
   Creates a user.
@@ -52,6 +60,14 @@ defmodule Actovka.Accounts do
   def create_user(attrs \\ %{}) do
     %User{}
     |> User.changeset(attrs)
+    |> Ecto.Changeset.cast_assoc(:credential, with: &Credential.changeset/2)
+    |> Repo.insert()
+  end
+
+  def create_manager(attrs \\ %{}) do
+    %User{}
+    |> User.changeset(Map.merge(attrs, %{role: "manager"}))
+    |> Ecto.Changeset.cast_assoc(:credential, with: &Credential.changeset/2)
     |> Repo.insert()
   end
 
@@ -70,6 +86,7 @@ defmodule Actovka.Accounts do
   def update_user(%User{} = user, attrs) do
     user
     |> User.changeset(attrs)
+    |> Ecto.Changeset.cast_assoc(:credential, with: &Credential.changeset/2)
     |> Repo.update()
   end
 
@@ -100,5 +117,126 @@ defmodule Actovka.Accounts do
   """
   def change_user(%User{} = user) do
     User.changeset(user, %{})
+  end
+
+  alias Actovka.Accounts.Credential
+
+  @doc """
+  Returns the list of credentials.
+
+  ## Examples
+
+      iex> list_credentials()
+      [%Credential{}, ...]
+
+  """
+  def list_credentials do
+    Repo.all(Credential)
+  end
+
+  @doc """
+  Gets a single credential.
+
+  Raises `Ecto.NoResultsError` if the Credential does not exist.
+
+  ## Examples
+
+      iex> get_credential!(123)
+      %Credential{}
+
+      iex> get_credential!(456)
+      ** (Ecto.NoResultsError)
+
+  """
+  def get_credential!(id), do: Repo.get!(Credential, id)
+
+  @doc """
+  Creates a credential.
+
+  ## Examples
+
+      iex> create_credential(%{field: value})
+      {:ok, %Credential{}}
+
+      iex> create_credential(%{field: bad_value})
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def create_credential(attrs \\ %{}) do
+    %Credential{}
+    |> Credential.changeset(attrs)
+    |> Repo.insert()
+  end
+
+  @doc """
+  Updates a credential.
+
+  ## Examples
+
+      iex> update_credential(credential, %{field: new_value})
+      {:ok, %Credential{}}
+
+      iex> update_credential(credential, %{field: bad_value})
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def update_credential(%Credential{} = credential, attrs) do
+    credential
+    |> Credential.changeset(attrs)
+    |> Repo.update()
+  end
+
+  @doc """
+  Deletes a Credential.
+
+  ## Examples
+
+      iex> delete_credential(credential)
+      {:ok, %Credential{}}
+
+      iex> delete_credential(credential)
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def delete_credential(%Credential{} = credential) do
+    Repo.delete(credential)
+  end
+
+  @doc """
+  Returns an `%Ecto.Changeset{}` for tracking credential changes.
+
+  ## Examples
+
+      iex> change_credential(credential)
+      %Ecto.Changeset{source: %Credential{}}
+
+  """
+  def change_credential(%Credential{} = credential) do
+    Credential.changeset(credential, %{})
+  end
+
+  def authenticate_by_email_password(email, password) do
+    query =
+      from u in User,
+        inner_join: c in assoc(u, :credential),
+        preload: [:credential],
+        where: c.email == ^email
+
+    case Repo.one(query) do
+      %User{} = user ->
+        valid_password?(user, password)
+        {:ok, user}
+      nil ->
+        @bcrypt.dummy_checkpw()
+        {:error, :unauthorized}
+    end
+  end
+
+  defp valid_password?(user, password) do
+    if @bcrypt.checkpw(password, user.credential.encrypted_password) do
+      {:ok, user}
+    else
+      {:error, :unauthorized}
+    end
   end
 end
